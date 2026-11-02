@@ -2,7 +2,7 @@
 
 A PyTorch pipeline that fine-tunes an ImageNet-pretrained **EfficientNet-B0** to classify dermoscopic images into **7 diagnostic categories** from the [ISIC 2019](https://challenge.isic-archive.com/landing/2019/) dataset. The project focuses on doing the evaluation *carefully*: lesion-level train/validation splitting to prevent data leakage, class-balanced sampling for a heavily imbalanced dataset, and macro-averaged metrics so that rare (and clinically important) classes are not hidden behind the majority class.
 
-> **Disclaimer:** This is an educational / research project. It is **not** a medical device and must not be used for diagnosis or clinical decision-making.
+> **Disclaimer:** This is an educational/research project. It is **not** a medical device and must not be used for diagnosis or clinical decision-making.
 
 ---
 
@@ -31,7 +31,7 @@ A PyTorch pipeline that fine-tunes an ImageNet-pretrained **EfficientNet-B0** to
 - **Imbalance handling:** `WeightedRandomSampler` with inverse-frequency weights gives each mini-batch a roughly uniform class distribution. Model selection uses **macro F1** rather than accuracy.
 - **Transfer learning:** all layers of an ImageNet-pretrained EfficientNet-B0 are fine-tuned, with the final linear layer replaced by a 7-way head.
 - **Efficient training:** mixed-precision (AMP) training, AdamW optimiser, cosine learning-rate schedule, pinned memory and persistent data-loader workers.
-- **Honest evaluation:** full per-class precision / recall / F1 reported at every epoch, with the limitations of the current evaluation protocol documented below.
+- **Honest evaluation:** full per-class precision/recall/F1 reported at every epoch, with the limitations of the current evaluation protocol documented below.
 
 ---
 
@@ -95,16 +95,16 @@ In the original Kaggle notebook these were read from the following inputs (adjus
 
 The model predicts **7 classes**: `AK`, `BCC`, `BKL`, `DF`, `MEL`, `NV`, `VASC`.
 
-The SCC (squamous cell carcinoma) and UNK columns of ISIC 2019 are **not** part of the label set used here, so images whose only positive label is SCC are excluded by the single-label filter described below.
+The SCC(squamous cell carcinoma) and UNK columns of ISIC 2019 are **not** part of the label set used here, so images whose only positive label is SCC are excluded by the single-label filter described below.
 
 ### Filtering
 
 After merging metadata and labels on the image ID, the pipeline:
 
-1. drops rows with any missing value (`dropna`), and
-2. keeps only rows with **exactly one** positive label (to discard ambiguous annotations).
+1. drops rows with any missing value(`dropna`), and
+2. keeps only rows with **exactly one** positive label(to discard ambiguous annotations).
 
-This leaves roughly 21,000 images in total (4,228 of them in the validation split).
+This leaves roughly 21,000 images in total(4,228 of them in the validation split).
 
 ---
 
@@ -130,7 +130,7 @@ flowchart LR
 
 ### 1. Label construction
 
-Labels are recovered from the one-hot columns with `idxmax(axis=1)` and mapped to integers using an alphabetically sorted class list, which gives a deterministic class ordering (`AK=0, BCC=1, BKL=2, DF=3, MEL=4, NV=5, VASC=6`). An `assert` checks that no label ended up as NaN after mapping.
+Labels are recovered from the one-hot columns with `idxmax(axis=1)` and mapped to integers using an alphabetically sorted class list, which gives a deterministic class ordering(`AK=0, BCC=1, BKL=2, DF=3, MEL=4, NV=5, VASC=6`). An `assert` checks that no label ended up as NaN after mapping.
 
 ### 2. Lesion-level grouped split
 
@@ -149,12 +149,12 @@ Normalisation uses the ImageNet mean `[0.485, 0.456, 0.406]` and std `[0.229, 0.
 
 ### 4. Handling class imbalance
 
-Class counts in the training split are inverted to give per-sample weights (`1 / class_count`), which feed a `WeightedRandomSampler` (`replacement=True`, `num_samples = len(train set)`). Rare-class images are therefore drawn many times per epoch, and each mini-batch sees a roughly uniform class distribution. The loss itself is plain (unweighted) cross-entropy; the rebalancing happens entirely in the sampler.
+Class counts in the training split are inverted to give per-sample weights(`1 / class_count`), which feed a `WeightedRandomSampler`(`replacement=True`, `num_samples = len(train set)`). Rare-class images are therefore drawn many times per epoch, and each mini-batch sees a roughly uniform class distribution. The loss itself is plain (unweighted) cross-entropy; the rebalancing happens entirely in the sampler.
 
 ### 5. Model
 
 - **Backbone:** `torchvision.models.efficientnet_b0` with `IMAGENET1K_V1` weights.
-- **Head:** the final linear layer (`classifier[1]`) is replaced with `Linear(1280, 7)`. The default dropout (p=0.2) before it is kept.
+- **Head:** the final linear layer(`classifier[1]`) is replaced with `Linear(1280, 7)`. The default dropout (p=0.2) before it is kept.
 - **Fine-tuning:** the backbone is **not frozen**; all layers are trained.
 - EfficientNet-B0 was chosen because it offers strong accuracy at a small parameter count, which makes fine-tuning fast on a single GPU.
 
@@ -169,7 +169,7 @@ Class counts in the training split are inverted to give per-sample weights (`1 /
 
 ### 7. Evaluation and checkpointing
 
-After every epoch the model is evaluated on the validation set. The script reports the full `classification_report` (per-class precision, recall, F1, support) and the **macro F1**, which weights all classes equally and is therefore a more informative selection metric than accuracy for an imbalanced problem. The weights are saved to `best_model.pt` whenever macro F1 improves.
+After every epoch the model is evaluated on the validation set. The script reports the full `classification_report`(per-class precision, recall, F1, support) and the **macro F1**, which weights all classes equally and is therefore a more informative selection metric than accuracy for an imbalanced problem. The weights are saved to `best_model.pt` whenever macro F1 improves.
 
 ---
 
@@ -287,7 +287,7 @@ for c, p in sorted(zip(classes, probs.tolist()), key=lambda t: -t[1]):
 
 What is controlled:
 
-- The train/validation split is fixed (`GroupShuffleSplit`, `random_state=42`), so the same lesions are always in the same split given the same input files.
+- The train/validation split is fixed(`GroupShuffleSplit`, `random_state=42`), so the same lesions are always in the same split given the same input files.
 - Class ordering is deterministic (alphabetical).
 - Validation preprocessing contains no randomness.
 
@@ -313,13 +313,13 @@ torch.backends.cudnn.deterministic = True
 
 Being explicit about these matters more than the headline numbers:
 
-1. **No separate test set.** The same validation split is used both to choose the best checkpoint and to report results, so reported scores are optimistically biased. A proper protocol would use a train / validation / test split (or cross-validation), with model selection on validation only.
-2. **Seven of the dataset's classes only.** SCC and UNK are not modelled, and the `dropna` / single-label filters remove some images. Dropping rows with missing metadata (for example age, sex or anatomical site) may introduce selection bias, since missingness is not random.
+1. **No separate test set.** The same validation split is used both to choose the best checkpoint and to report results, so reported scores are optimistically biased. A proper protocol would use a train/validation/test split(or cross-validation), with model selection on validation only.
+2. **Seven of the dataset's classes only.** SCC and UNK are not modelled, and the `dropna`/single-label filters remove some images. Dropping rows with missing metadata (for example age, sex or anatomical site) may introduce selection bias, since missingness is not random.
 3. **Limited metrics.** The notebook reports precision, recall, F1 and accuracy. It does **not** compute ROC-AUC, per-class AUC, a confusion matrix, or probability calibration.
 4. **Single run, no variance estimate.** Differences of a few points in macro F1, and especially in small classes such as DF (n = 35) and VASC (n = 57), are within plausible run-to-run noise.
 5. **Overfitting.** Training loss keeps decreasing while validation macro F1 plateaus after roughly epoch 15 to 17.
 6. **Moderate absolute performance.** Melanoma recall of about 0.54 is far too low for any clinical use.
-7. **Dataset bias.** ISIC data come from specific institutions, devices and (predominantly lighter-skinned) patient populations, so performance may not generalise to other settings or skin tones.
+7. **Dataset bias.** ISIC data come from specific institutions, devices and(predominantly lighter-skinned) patient populations, so performance may not generalise to other settings or skin tones.
 8. **Augmentation is minimal.** Only random resized crops, horizontal flips and mild colour jitter are used.
 
 ---
@@ -374,8 +374,8 @@ print(cm)
 ## Author and license
 
 **Rares Ioan Costinescu**
-[GitHub](https://github.com/rarescos) · [LinkedIn](ADD-LINK-HERE)
+[GitHub](https://github.com/rarescos) · [LinkedIn](www.linkedin.com/in/rares-ioan-costinescu-604685335)
 
-Released under the **[CHOOSE A LICENSE, e.g. MIT]** license (add a `LICENSE` file to the repository).
+Released under the **MIT** license.
 
 The ISIC 2019 data are subject to their own licence and terms of use (check the ISIC archive and the dataset pages above before redistributing any images or derived data).
